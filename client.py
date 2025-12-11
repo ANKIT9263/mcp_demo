@@ -2,15 +2,18 @@
 
 import os
 import json
+import requests
 from openai import OpenAI
 from dotenv import load_dotenv
-from tools import add_numbers, greet, get_info, get_config
 
 # Load environment variables
 load_dotenv()
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# MCP Server URL
+MCP_SERVER_URL = "http://localhost:8001"
 
 # Define available tools for function calling
 tools = [
@@ -77,22 +80,23 @@ tools = [
 ]
 
 def call_tool(tool_name: str, arguments: dict) -> dict:
-    """Call the MCP server tool function"""
+    """Call the MCP server tool via HTTP API"""
     try:
-        if tool_name == "add_numbers":
-            result = add_numbers(arguments["a"], arguments["b"])
-            return {"result": result, "status": "success"}
-        elif tool_name == "greet":
-            result = greet(arguments["name"])
-            return {"result": result, "status": "success"}
-        elif tool_name == "get_info":
-            result = get_info()
-            return {"result": result, "status": "success"}
-        elif tool_name == "get_config":
-            result = get_config()
-            return {"result": result, "status": "success"}
+        response = requests.post(
+            f"{MCP_SERVER_URL}/tools/execute",
+            json={
+                "tool_name": tool_name,
+                "arguments": arguments
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.json()
         else:
-            return {"error": f"Unknown tool: {tool_name}", "status": "error"}
+            return {"error": f"MCP server error: {response.status_code}", "status": "error"}
+    except requests.exceptions.ConnectionError:
+        return {"error": "Cannot connect to MCP server. Is it running on port 8001?", "status": "error"}
     except Exception as e:
         return {"error": str(e), "status": "error"}
 

@@ -109,3 +109,6 @@ with st.sidebar:
     - What's the server info?
     - Show me the config
     """)
+
+if __name__ == '__main__':
+    pass
